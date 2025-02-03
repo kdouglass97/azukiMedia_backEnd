@@ -2,7 +2,18 @@ from fastapi import FastAPI
 import os
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, Process
-from crewai_tools import SerperDevTool  
+from crewai_tools import SerperDevTool
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow requests from anywhere (for now)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ✅ Load API keys from .env file
 load_dotenv()
