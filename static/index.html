@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Summary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #f5f8fa;
+        }
+        input {
+            padding: 10px;
+            width: 300px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #1DA1F2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0d8ae9;
+        }
+        .tweet-container {
+            width: 500px;
+            margin: 20px auto;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: left;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .tweet-header {
+            display: flex;
+            align-items: center;
+        }
+        .profile-pic {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .tweet-body {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .tweet-body a {
+            color: #1DA1F2;
+            text-decoration: none;
+        }
+        .tweet-body a:hover {
+            text-decoration: underline;
+        }
+        .tweet-meta {
+            color: #657786;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI News Summary</h1>
+    <p>Enter a topic to get the latest AI-generated news summary.</p>
+    
+    <input type="text" id="topicInput" placeholder="Enter a topic...">
+    <button onclick="fetchSummary()">Get Summary</button>
+
+    <div id="result"></div>
+
+    <script>
+        async function fetchSummary() {
+            const topic = document.getElementById("topicInput").value.trim();
+            const resultDiv = document.getElementById("result");
+
+            if (!topic) {
+                resultDiv.innerHTML = "<p style='color: red;'>Please enter a topic!</p>";
+                return;
+            }
+
+            resultDiv.innerHTML = "<p>Loading...</p>";  
+
+            const BASE_URL = window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1")
+                ? "http://127.0.0.1:8000"
+                : "https://azukimedia.onrender.com";
+
+            try {
+                const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log("API Response:", data);
+
+                let summaryContent = "";
+                
+                if (data.summary && data.summary.raw) {
+                    summaryContent = data.summary.raw
+                        .split("\n")
+                        .map(line => {
+                            return line
+                                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // Bold titles
+                                .replace(/@(\w+)/g, '<a href="https://twitter.com/$1" target="_blank">@$1</a>') // Convert mentions to links
+                                .replace(/\[.*?\]\((.*?)\)/g, `🔗 <a href="$1" target="_blank" style="color: #1DA1F2;">[Source]</a>`); // Make links look clickable
+                        })
+                        .join("<br>");
+                } else {
+                    summaryContent = "<p style='color: red;'>No summary available.</p>";
+                }
+
+                resultDiv.innerHTML = `
+                    <div class="tweet-container">
+                        <div class="tweet-header">
+                            <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile Picture">
+                            <div>
+                                <strong>Azuki Media</strong> <br>
+                                <span class="tweet-meta">@azukimedia · 2h</span>
+                            </div>
+                        </div>
+                        <div class="tweet-body">
+                            🌐 <strong>Latest #${topic} updates:</strong> <br><br>
+                            ${summaryContent} <br><br>
+                            🔥 #AI #Tech #Trending
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error("Fetch error:", error);
+                resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

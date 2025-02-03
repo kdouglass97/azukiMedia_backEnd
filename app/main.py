@@ -1,19 +1,10 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 import os
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow requests from anywhere (for now)
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ✅ Load API keys from .env file
 load_dotenv()
@@ -68,10 +59,26 @@ write_tweet_task = Task(
 # ✅ Create FastAPI instance
 app = FastAPI()
 
-@app.get("/")
-def home():
-    return {"message": "AI News API is running!"}
+from fastapi.middleware.cors import CORSMiddleware
 
+# ✅ Fix Preflight (CORS) Issues
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
+# ✅ Serve Static UI (index.html)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "../static")
+
+@app.get("/")
+def serve_homepage():
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+# ✅ News Summary Endpoint
 @app.get("/summary/{topic}")
 def get_summary(topic: str):
     # ✅ Create and execute the CrewAI pipeline
