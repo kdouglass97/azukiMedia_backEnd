@@ -117,16 +117,27 @@ write_tweet_task = Task(
 # ✅ News Summary API Endpoint
 @app.get("/summary/{topic}")
 async def get_summary(topic: str):
-    print(f"Received request for topic: {topic}")  # ✅ Debugging log
-    crew = Crew(
-        agents=[news_scraper, content_analyzer, tweet_writer],
-        tasks=[scrape_task, analyze_task, write_tweet_task],
-        process=Process.sequential,
-    )
-    
-    result = crew.kickoff(inputs={"topic": topic})
-    
-    return JSONResponse(
-        content={"topic": topic, "summary": result},
-        headers={"Access-Control-Allow-Origin": "*"}  # ✅ CORS header in response
-    )
+    print(f"🟢 Received request for topic: {topic}")  # ✅ Log API calls
+
+    try:
+        crew = Crew(
+            agents=[news_scraper, content_analyzer, tweet_writer],
+            tasks=[scrape_task, analyze_task, write_tweet_task],
+            process=Process.sequential,
+        )
+        result = crew.kickoff(inputs={"topic": topic})
+        print(f"✅ CrewAI Result: {result}")  # ✅ Log AI results
+
+        # 🔹 Convert CrewAI Output to JSON String
+        result_json = str(result)  # ✅ Ensure it's a JSON-serializable string
+
+        return JSONResponse(
+            content={"topic": topic, "summary": result_json},
+            headers={"Access-Control-Allow-Origin": "*"}
+        )
+    except Exception as e:
+        print(f"❌ ERROR: {e}")  # ✅ Log any crashes
+        return JSONResponse(
+            content={"error": "Server error", "details": str(e)},
+            status_code=500
+        )
