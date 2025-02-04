@@ -43,6 +43,17 @@ import os
 
 app = FastAPI()
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class PermissionsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Permissions-Policy"] = "interest-cohort=()"  # Disable trial features
+        return response
+
+app.add_middleware(PermissionsMiddleware)
+
 # ✅ Fix Static File Path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
