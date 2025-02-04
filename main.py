@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import os
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # ✅ Load API Keys
 load_dotenv()
@@ -14,6 +16,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ✅ Initialize FastAPI App
 app = FastAPI()
 
+# ✅ Serve Static Files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # ✅ CORS Middleware
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +27,15 @@ app.add_middleware(
     allow_methods=["*"],  
     allow_headers=["*"],
 )
+
+# ✅ Fix Permissions-Policy Errors
+class PermissionsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Permissions-Policy"] = "interest-cohort=()"
+        return response
+
+app.add_middleware(PermissionsMiddleware)
 
 # ✅ Manually Handle OPTIONS for /summary/{topic}
 @app.options("/summary/{topic}")
@@ -36,35 +50,13 @@ async def options_summary(topic: str):
         },
     )
 
-# ✅ Fix Static File Path (Corrected)
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
-import os
-
-app = FastAPI()
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
-
-class PermissionsMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers["Permissions-Policy"] = "interest-cohort=()"  # Disable trial features
-        return response
-
-app.add_middleware(PermissionsMiddleware)
-
-# ✅ Fix Static File Path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-
+# ✅ Serve Homepage
 @app.get("/")
 async def serve_homepage():
-    index_path = os.path.join(STATIC_DIR, "index.html")
-
-    # 🔹 Debugging: Print if the file exists
+    index_path = "static/index.html"
+    
     if not os.path.exists(index_path):
-        print(f"ERROR: index.html not found at {index_path}")
+        print(f"❌ ERROR: index.html not found at {index_path}")
         return JSONResponse(content={"error": "index.html not found"}, status_code=404)
 
     return FileResponse(index_path)
