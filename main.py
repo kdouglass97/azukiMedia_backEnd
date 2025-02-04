@@ -98,6 +98,7 @@ write_tweet_task = Task(
 # ✅ News Summary API Endpoint
 @app.get("/summary/{topic}")
 async def get_summary(topic: str):
+    print(f"Received request for topic: {topic}")  # ✅ Debugging log
     crew = Crew(
         agents=[news_scraper, content_analyzer, tweet_writer],
         tasks=[scrape_task, analyze_task, write_tweet_task],
