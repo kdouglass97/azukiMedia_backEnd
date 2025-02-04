@@ -52,14 +52,25 @@
                 console.log("✅ API Response:", data);
     
                 let summaryText = "No summary available.";
+                let imageUrl = "";  // 🔹 Placeholder for images
+                let sourceUrl = ""; // 🔹 Placeholder for source link
+    
                 if (typeof data.summary === "string") {
                     summaryText = data.summary.replace(/\n/g, "<br>");  
                 } else if (data.summary && typeof data.summary.raw === "string") {
                     summaryText = data.summary.raw.replace(/\n/g, "<br>");
                 }
     
-                // 🔹 Convert text into Twitter-style format (links clickable)
+                // 🔹 Extract links as clickable
                 summaryText = summaryText.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+                // 🔹 Extract the first image URL if available
+                const imageMatch = data.summary.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
+                if (imageMatch) {
+                    imageUrl = imageMatch[1];  // 🔹 Extract URL
+                    summaryText = summaryText.replace(imageMatch[0], "");  // 🔹 Remove image markdown from text
+                    sourceUrl = imageUrl; // 🔹 Link the image to its source
+                }
     
                 // 🔹 Generate a fake timestamp (current time)
                 const tweetDate = new Date().toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -74,6 +85,7 @@
                             </div>
                         </div>
                         <div class="tweet-body">${summaryText}</div>
+                        ${imageUrl ? `<a href="${sourceUrl}" target="_blank"><img class="tweet-image" src="${imageUrl}" alt="Tweet Image"></a>` : ""}
                     </div>
                 `;
             } catch (error) {
@@ -81,6 +93,6 @@
                 resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
             }
         }
-    </script>    
+    </script>        
 </body>
 </html>
