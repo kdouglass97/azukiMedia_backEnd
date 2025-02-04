@@ -38,16 +38,13 @@ async def options_summary(topic: str):
 
 # ✅ Fix Static File Path (Corrected)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")  # 🔥 Removed "../"
+STATIC_DIR = os.path.join(BASE_DIR, "static")  # 🔥 FIXED PATH
 
 @app.get("/")
-def serve_homepage():
+async def serve_homepage():
     index_path = os.path.join(STATIC_DIR, "index.html")
-    
-    # 🔹 Ensure file exists before serving (prevents FileNotFoundError)
     if not os.path.exists(index_path):
         return JSONResponse(content={"error": "index.html not found"}, status_code=404)
-    
     return FileResponse(index_path)
 
 # ✅ Set Up Search Tool (Serper API)
