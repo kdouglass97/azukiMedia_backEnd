@@ -16,9 +16,7 @@ async function fetchSummary() {
     try {
         const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
             method: "GET",
-            headers: { 
-                "Accept": "application/json"
-            }
+            headers: { "Accept": "application/json" }
         });
 
         if (!response.ok) {
@@ -26,10 +24,14 @@ async function fetchSummary() {
         }
 
         const data = await response.json();
-        resultDiv.innerHTML = `<h3>📢 Latest "${topic}" Updates:</h3>
-            <div style="background:#F5F8FA; border-radius:10px; padding:15px;">
-                ${data.summary.replace(/\n/g, "<br>")}
-            </div>`;
+        console.log("API Response:", data);  // ✅ LOGGING RESPONSE TO DEBUG
+
+        resultDiv.innerHTML = `
+            <h3>📢 Latest "${topic}" Updates:</h3>
+            <div style="background:#F5F8FA; border-radius:10px; padding:15px; text-align:left;">
+                ${data.summary ? data.summary.replace(/\n/g, "<br>") : "No summary available."}
+            </div>
+        `;
     } catch (error) {
         console.error("Fetch error:", error);
         resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
