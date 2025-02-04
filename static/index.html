@@ -52,8 +52,8 @@
                 console.log("✅ API Response:", data);
     
                 let summaryText = "No summary available.";
-                let imageUrl = "";  // 🔹 Placeholder for images
-                let sourceUrl = ""; // 🔹 Placeholder for source link
+                let imageUrl = "";  
+                let sourceUrl = ""; 
     
                 if (typeof data.summary === "string") {
                     summaryText = data.summary.replace(/\n/g, "<br>");  
@@ -61,15 +61,15 @@
                     summaryText = data.summary.raw.replace(/\n/g, "<br>");
                 }
     
-                // 🔹 Extract links as clickable
+                // 🔹 Convert Markdown Links into Clickable HTML Links
                 summaryText = summaryText.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     
-                // 🔹 Extract the first image URL if available
+                // 🔹 Extract the FIRST Image URL if available
                 const imageMatch = data.summary.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
                 if (imageMatch) {
-                    imageUrl = imageMatch[1];  // 🔹 Extract URL
-                    summaryText = summaryText.replace(imageMatch[0], "");  // 🔹 Remove image markdown from text
-                    sourceUrl = imageUrl; // 🔹 Link the image to its source
+                    imageUrl = imageMatch[1];  // ✅ Extract URL
+                    summaryText = summaryText.replace(imageMatch[0], "");  // ✅ Remove image markdown from text
+                    sourceUrl = imageUrl; // ✅ Link the image to its source
                 }
     
                 // 🔹 Generate a fake timestamp (current time)
@@ -93,6 +93,6 @@
                 resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
             }
         }
-    </script>        
+    </script>            
 </body>
 </html>
