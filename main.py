@@ -17,9 +17,9 @@ app = FastAPI()
 # ✅ CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=["https://azukimedia.up.railway.app"],  # ✅ Allow only your frontend
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],  # Explicitly allow OPTIONS
+    allow_methods=["*"],  
     allow_headers=["*"],
 )
 
