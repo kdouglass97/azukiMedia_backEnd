@@ -37,14 +37,25 @@ async def options_summary(topic: str):
     )
 
 # ✅ Fix Static File Path (Corrected)
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
+import os
+
+app = FastAPI()
+
+# ✅ Fix Static File Path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")  # 🔥 FIXED PATH
+STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 @app.get("/")
 async def serve_homepage():
     index_path = os.path.join(STATIC_DIR, "index.html")
+
+    # 🔹 Debugging: Print if the file exists
     if not os.path.exists(index_path):
+        print(f"ERROR: index.html not found at {index_path}")
         return JSONResponse(content={"error": "index.html not found"}, status_code=404)
+
     return FileResponse(index_path)
 
 # ✅ Set Up Search Tool (Serper API)

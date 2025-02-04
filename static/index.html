@@ -1,0 +1,37 @@
+async function fetchSummary() {
+    const topic = document.getElementById("topicInput").value.trim();
+    const resultDiv = document.getElementById("result");
+
+    if (!topic) {
+        resultDiv.innerHTML = "<p style='color: red;'>Please enter a topic!</p>";
+        return;
+    }
+
+    resultDiv.innerHTML = "<p>Loading...</p>";
+
+    const BASE_URL = window.location.hostname.includes("localhost") 
+        ? "http://127.0.0.1:8000" 
+        : "https://azukimedia.up.railway.app";
+
+    try {
+        const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
+            method: "GET",
+            headers: { 
+                "Accept": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        resultDiv.innerHTML = `<h3>📢 Latest "${topic}" Updates:</h3>
+            <div style="background:#F5F8FA; border-radius:10px; padding:15px;">
+                ${data.summary.replace(/\n/g, "<br>")}
+            </div>`;
+    } catch (error) {
+        console.error("Fetch error:", error);
+        resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
+    }
+}
