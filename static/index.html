@@ -56,15 +56,18 @@
                 let sourceUrl = ""; 
     
                 if (typeof data.summary === "string") {
-                    summaryText = data.summary.replace(/\n/g, "<br>");  
+                    summaryText = data.summary;
                 } else if (data.summary && typeof data.summary.raw === "string") {
-                    summaryText = data.summary.raw.replace(/\n/g, "<br>");
+                    summaryText = data.summary.raw;
                 }
     
-                // 🔹 Convert Markdown Links into Clickable HTML Links
-                summaryText = summaryText.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+                // ✅ Convert Markdown Formatting
+                summaryText = summaryText
+                    .replace(/\n/g, "<br>")  // ✅ Newlines to HTML line breaks
+                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")  // ✅ Bold formatting
+                    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>'); // ✅ Hyperlinks
     
-                // 🔹 Extract the FIRST Image URL if available
+                // ✅ Extract the FIRST Image URL if available
                 const imageMatch = data.summary.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
                 if (imageMatch) {
                     imageUrl = imageMatch[1];  // ✅ Extract URL
@@ -72,7 +75,7 @@
                     sourceUrl = imageUrl; // ✅ Link the image to its source
                 }
     
-                // 🔹 Generate a fake timestamp (current time)
+                // ✅ Generate a fake timestamp (current time)
                 const tweetDate = new Date().toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
     
                 resultDiv.innerHTML = `
@@ -93,6 +96,6 @@
                 resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
             }
         }
-    </script>            
+    </script>                
 </body>
 </html>
