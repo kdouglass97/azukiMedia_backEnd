@@ -1,53 +1,73 @@
-async function fetchSummary() {
-    console.log("🔥 fetchSummary() function triggered!");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Summary</title>
+</head>
+<body>
+    <h1>AI News Summary</h1>
+    <p>Enter a topic to get the latest AI-generated news summary.</p>
+    
+    <input type="text" id="topicInput" placeholder="Enter a topic...">
+    <button onclick="fetchSummary()">Get Summary</button>
 
-    const topic = document.getElementById("topicInput").value.trim();
-    const resultDiv = document.getElementById("result");
+    <div id="result"></div>
 
-    if (!topic) {
-        resultDiv.innerHTML = "<p style='color: red;'>Please enter a topic!</p>";
-        return;
-    }
+    <script>
+        async function fetchSummary() {
+            console.log("🔥 fetchSummary() function triggered!");
 
-    resultDiv.innerHTML = "<p>Loading...</p>";
+            const topic = document.getElementById("topicInput").value.trim();
+            const resultDiv = document.getElementById("result");
 
-    const BASE_URL = window.location.hostname.includes("localhost") 
-        ? "http://127.0.0.1:8000" 
-        : "https://azukimedia.up.railway.app";
+            if (!topic) {
+                resultDiv.innerHTML = "<p style='color: red;'>Please enter a topic!</p>";
+                return;
+            }
 
-    try {
-        console.log(`🔗 Fetching: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
+            resultDiv.innerHTML = "<p>Loading...</p>";
 
-        const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
+            const BASE_URL = window.location.hostname.includes("localhost") 
+                ? "http://127.0.0.1:8000" 
+                : "https://azukimedia.up.railway.app";
 
-        console.log("🟢 Response Status:", response.status);
+            try {
+                console.log(`🔗 Fetching: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
 
-        if (!response.ok) {
-            throw new Error(`❌ Server error: ${response.status} - ${response.statusText}`);
+                const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
+                    method: "GET",
+                    headers: { "Accept": "application/json" }
+                });
+
+                console.log("🟢 Response Status:", response.status);
+
+                if (!response.ok) {
+                    throw new Error(`❌ Server error: ${response.status} - ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log("✅ API Response:", data);  // ✅ Log the full response
+
+                // 🔹 Ensure `data.summary` is correctly displayed
+                let summaryText = "No summary available.";
+                if (typeof data.summary === "string") {
+                    summaryText = data.summary.replace(/\n/g, "<br>");  // ✅ Convert line breaks to HTML
+                } else if (data.summary && typeof data.summary.raw === "string") {
+                    summaryText = data.summary.raw.replace(/\n/g, "<br>");  // ✅ Handle nested object case
+                }
+
+                resultDiv.innerHTML = `
+                    <h3>📢 Latest "${topic}" Updates:</h3>
+                    <div style="background:#F5F8FA; border-radius:10px; padding:15px; text-align:left;">
+                        ${summaryText}
+                    </div>
+                `;
+            } catch (error) {
+                console.error("🚨 Fetch error:", error);
+                resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
+            }
         }
-
-        const data = await response.json();
-        console.log("✅ API Response:", data);  // ✅ Log the full response
-
-        // 🔹 Ensure `data.summary` is correctly displayed
-        let summaryText = "No summary available.";
-        if (typeof data.summary === "string") {
-            summaryText = data.summary.replace(/\n/g, "<br>");  // ✅ Convert line breaks to HTML
-        } else if (data.summary && typeof data.summary.raw === "string") {
-            summaryText = data.summary.raw.replace(/\n/g, "<br>");  // ✅ Handle nested object case
-        }
-
-        resultDiv.innerHTML = `
-            <h3>📢 Latest "${topic}" Updates:</h3>
-            <div style="background:#F5F8FA; border-radius:10px; padding:15px; text-align:left;">
-                ${summaryText}
-            </div>
-        `;
-    } catch (error) {
-        console.error("🚨 Fetch error:", error);
-        resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
-    }
-}
+    </script>
+</body>
+</html>
