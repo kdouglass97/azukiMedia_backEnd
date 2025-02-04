@@ -16,7 +16,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ✅ Initialize FastAPI App
 app = FastAPI()
 
-# ✅ Serve Static Files
+# ✅ Mount Static Directory (Ensures /static/style.css Works)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ✅ CORS Middleware
