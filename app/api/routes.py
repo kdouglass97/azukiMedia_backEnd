@@ -2,11 +2,12 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse, FileResponse
 import os
 from app.crewai.agents import get_summary_from_agents
+from app.database.supabase_client import insert_summary_to_db  # ✅ Import only the needed function
 
 # ✅ Initialize Router
 router = APIRouter()
 
-# ✅ Serve Homepage (Static HTML)
+# ✅ Serve Homepage
 @router.get("/")
 async def serve_homepage():
     index_path = "app/static/index.html"
@@ -30,14 +31,16 @@ async def options_summary(topic: str):
         },
     )
 
-# ✅ News Summary API Endpoint (Calls CrewAI)
+# ✅ News Summary API Endpoint (Calls CrewAI + Stores in Supabase)
 @router.get("/summary/{topic}")
 async def get_summary(topic: str):
     print(f"🟢 Received request for topic: {topic}")  # ✅ Log API calls
-
     try:
         result = get_summary_from_agents(topic)  # ✅ Calls CrewAI processing
         print(f"✅ CrewAI Result: {result}")  # ✅ Log AI results
+
+        # ✅ Save to Supabase
+        insert_summary_to_db(topic, result)  
 
         return JSONResponse(
             content={"topic": topic, "summary": result},
