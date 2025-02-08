@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="static/style.css">  <!-- ✅ Ensure correct CSS path -->
 </head>
 <body>
+
     <h1>AI News Summary</h1>
     <p>Enter a topic to get the latest AI-generated news summary.</p>
     
@@ -25,7 +26,7 @@
 
             const topic = document.getElementById("topicInput").value.trim();
             const resultDiv = document.getElementById("result");
-            const historyDiv = document.getElementById("history"); // ✅ Get history div
+            const historyDiv = document.getElementById("history");
 
             if (!topic) {
                 resultDiv.innerHTML = "<p style='color: red;'>⚠️ Please enter a topic!</p>";
@@ -33,7 +34,7 @@
             }
 
             resultDiv.innerHTML = "<p>⏳ Loading...</p>";
-            historyDiv.innerHTML = "Fetching history..."; // ✅ Show message while loading
+            historyDiv.innerHTML = "Fetching history...";
 
             const BASE_URL = window.location.hostname.includes("localhost") 
                 ? "http://127.0.0.1:8000" 
@@ -54,6 +55,13 @@
                 const summaryData = await summaryResponse.json();
                 console.log("✅ API Response:", summaryData);
 
+                // 🛠 **CLEAN UP THE SUMMARY TEXT**
+                let cleanedSummary = summaryData.summary
+                    .replace(/\n/g, "<br>")  // ✅ Convert newlines to <br>
+                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")  // ✅ Bold Markdown (**text**) -> <strong>text</strong>
+                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>'); // ✅ Links -> Clickable HTML
+
+                // ✅ CREATE A CLEAN TWEET POST
                 const tweetContainer = document.createElement("div");
                 tweetContainer.classList.add("tweet-container");
 
@@ -65,17 +73,11 @@
                             <div class="tweet-meta">@azukimedia · Just Now</div>
                         </div>
                     </div>
-                    <div class="tweet-body"></div>
+                    <div class="tweet-body">${cleanedSummary}</div>  <!-- ✅ Inject cleaned summary -->
                 `;
-
-                // ✅ Use innerText to prevent unwanted HTML rendering issues
-                tweetContainer.querySelector(".tweet-body").innerText = summaryData.summary;
 
                 resultDiv.innerHTML = ""; // Clear previous results
                 resultDiv.appendChild(tweetContainer);
-
-                // ✅ Force style refresh
-                tweetContainer.offsetHeight; // Trigger reflow
 
                 // ✅ Fetch History After New Summary is Generated
                 await fetchHistory(topic);
@@ -121,7 +123,7 @@
                                 <div class="tweet-meta">@azukimedia · ${entry.date}</div>
                             </div>
                         </div>
-                        <div class="tweet-body">${entry.summary}</div>
+                        <div class="tweet-body">${entry.summary.replace(/\n/g, "<br>")}</div>
                     </div>
                 `).join("");
 
