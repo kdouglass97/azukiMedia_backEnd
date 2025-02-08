@@ -29,3 +29,11 @@ def insert_summary_to_db(topic: str, summary: str):
     except Exception as e:
         print(f"❌ ERROR inserting into DB: {e}")
 
+def fetch_history_from_db(topic: str):
+    """Fetch summaries for a given topic, sorted by newest first."""
+    try:
+        response = supabase.table("summaries").select("*").eq("topic", topic).order("created_at", desc=True).execute()
+        return response.data  # ✅ Return only the data part
+    except Exception as e:
+        print(f"❌ ERROR fetching from DB: {e}")
+        return []

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI News Summary</title>
-    <link rel="stylesheet" href="/static/style.css">  <!-- ✅ Corrected Path -->
+    <link rel="stylesheet" href="static/style.css">  <!-- ✅ Ensure correct CSS path -->
 </head>
      
 <body>
@@ -15,87 +15,112 @@
     <button onclick="fetchSummary()">Get Summary</button>
 
     <div id="result"></div>
+    
+    <!-- History Section -->
+    <h2>Topic History</h2>
+    <div id="history">Loading history...</div>  <!-- ✅ Default text -->
 
     <script>
         async function fetchSummary() {
             console.log("🔥 fetchSummary() function triggered!");
-    
+
             const topic = document.getElementById("topicInput").value.trim();
             const resultDiv = document.getElementById("result");
-    
+            const historyDiv = document.getElementById("history"); // ✅ Get history div
+
             if (!topic) {
-                resultDiv.innerHTML = "<p style='color: red;'>Please enter a topic!</p>";
+                resultDiv.innerHTML = "<p style='color: red;'>⚠️ Please enter a topic!</p>";
                 return;
             }
-    
-            resultDiv.innerHTML = "<p>Loading...</p>";
-    
+
+            resultDiv.innerHTML = "<p>⏳ Loading...</p>";
+            historyDiv.innerHTML = "Fetching history..."; // ✅ Show message while loading
+
             const BASE_URL = window.location.hostname.includes("localhost") 
                 ? "http://127.0.0.1:8000" 
                 : "https://azukimedia.up.railway.app";
-    
+
             try {
                 console.log(`🔗 Fetching: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
-    
-                const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
+
+                const summaryResponse = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
                     method: "GET",
                     headers: { "Accept": "application/json" }
                 });
-    
-                console.log("🟢 Response Status:", response.status);
-    
-                if (!response.ok) {
-                    throw new Error(`❌ Server error: ${response.status} - ${response.statusText}`);
+
+                if (!summaryResponse.ok) {
+                    throw new Error(`❌ Server error: ${summaryResponse.status} - ${summaryResponse.statusText}`);
                 }
-    
-                const data = await response.json();
-                console.log("✅ API Response:", data);
-    
-                let summaryText = "No summary available.";
-                let imageUrl = "";  
-                let sourceUrl = ""; 
-    
-                if (typeof data.summary === "string") {
-                    summaryText = data.summary;
-                } else if (data.summary && typeof data.summary.raw === "string") {
-                    summaryText = data.summary.raw;
-                }
-    
-                // ✅ Convert Markdown Formatting
-                summaryText = summaryText
-                    .replace(/\n/g, "<br>")  // ✅ Newlines to HTML line breaks
-                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")  // ✅ Bold formatting
-                    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>'); // ✅ Hyperlinks
-    
-                // ✅ Extract the FIRST Image URL if available
-                const imageMatch = data.summary.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
-                if (imageMatch) {
-                    imageUrl = imageMatch[1];  // ✅ Extract URL
-                    summaryText = summaryText.replace(imageMatch[0], "");  // ✅ Remove image markdown from text
-                    sourceUrl = imageUrl; // ✅ Link the image to its source
-                }
-    
-                // ✅ Generate a fake timestamp (current time)
-                const tweetDate = new Date().toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    
+
+                const summaryData = await summaryResponse.json();
+                console.log("✅ API Response:", summaryData);
+
                 resultDiv.innerHTML = `
                     <div class="tweet-container">
                         <div class="tweet-header">
                             <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
                             <div>
                                 <div class="tweet-username">AzukiMedia</div>
-                                <div class="tweet-meta">@azukimedia · ${tweetDate}</div>
+                                <div class="tweet-meta">@azukimedia · Just Now</div>
                             </div>
                         </div>
-                        <div class="tweet-body">${summaryText}</div>
-                        ${imageUrl ? `<a href="${sourceUrl}" target="_blank"><img class="tweet-image" src="${imageUrl}" alt="Tweet Image"></a>` : ""}
+                        <div class="tweet-body">${summaryData.summary}</div>
                     </div>
                 `;
+
+                // ✅ Fetch History After New Summary is Generated
+                fetchHistory(topic);
+
             } catch (error) {
                 console.error("🚨 Fetch error:", error);
-                resultDiv.innerHTML = `<p style='color: red;'>Error fetching summary: ${error.message}. Try again!</p>`;
+                resultDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching summary: ${error.message}. Try again!</p>`;
             }
         }
-    </script>                
+
+        async function fetchHistory(topic) {
+            console.log(`📜 Fetching history for: ${topic}`);
+
+            const historyDiv = document.getElementById("history");
+            const BASE_URL = window.location.hostname.includes("localhost") 
+                ? "http://127.0.0.1:8000" 
+                : "https://azukimedia.up.railway.app";
+
+            try {
+                const historyResponse = await fetch(`${BASE_URL}/history/${encodeURIComponent(topic)}`, {
+                    method: "GET",
+                    headers: { "Accept": "application/json" }
+                });
+
+                if (!historyResponse.ok) {
+                    throw new Error(`❌ Server error: ${historyResponse.status} - ${historyResponse.statusText}`);
+                }
+
+                const historyData = await historyResponse.json();
+                console.log("📜 History Response:", historyData);
+
+                if (!historyData.history.length) {
+                    historyDiv.innerHTML = "<p>📜 No past summaries found for this topic.</p>";
+                    return;
+                }
+
+                historyDiv.innerHTML = historyData.history.map(entry => `
+                    <div class="tweet-container">
+                        <div class="tweet-header">
+                            <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
+                            <div>
+                                <div class="tweet-username">AzukiMedia</div>
+                                <div class="tweet-meta">@azukimedia · ${entry.date}</div>
+                            </div>
+                        </div>
+                        <div class="tweet-body">${entry.summary}</div>
+                    </div>
+                `).join("");
+
+            } catch (error) {
+                console.error("🚨 History fetch error:", error);
+                historyDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching history: ${error.message}. Try again!</p>`;
+            }
+        }
+    </script>                       
 </body>
 </html>
