@@ -35,25 +35,25 @@ async def options_summary(topic: str):
 
 # ✅ News Summary API Endpoint (Calls CrewAI + Stores in Supabase)
 @router.get("/summary/{topic}")
+@router.get("/summary/{topic}")
 async def get_summary(topic: str):
-    print(f"🟢 Received request for topic: {topic}")  # ✅ Log API calls
-    try:
-        result = get_summary_from_agents(topic)  # ✅ Calls CrewAI processing
-        print(f"✅ CrewAI Result: {result}")  # ✅ Log AI results
+    # ✅ First, check if the summary already exists in the database
+    existing_summary = fetch_summary_from_db(topic)
+    if existing_summary:
+        return {"topic": topic, "summary": existing_summary}
 
-        # ✅ Save to Supabase
-        insert_summary_to_db(topic, result)  
+    # 🚀 If not found, generate a new summary
+    summary = generate_summary(topic)
+    
+    # ✅ Store it in the database
+    success = insert_summary_to_db(topic, summary)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save summary.")
 
-        return JSONResponse(
-            content={"topic": topic, "summary": result},
-            headers={"Access-Control-Allow-Origin": "*"}
-        )
-    except Exception as e:
-        print(f"❌ ERROR: {e}")  # ✅ Log any crashes
-        return JSONResponse(
-            content={"error": "Server error", "details": str(e)},
-            status_code=500
-        )
+    # ✅ Fetch again from DB (ensures formatting consistency)
+    stored_summary = fetch_summary_from_db(topic)
+    
+    return {"topic": topic, "summary": stored_summary}
 
 # ✅ Convert Markdown to HTML for frontend display
 def markdown_to_html(text: str) -> str:

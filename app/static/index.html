@@ -26,7 +26,7 @@
 
             const topic = document.getElementById("topicInput").value.trim();
             const resultDiv = document.getElementById("result");
-            const historyDiv = document.getElementById("history");
+            const historyDiv = document.getElementById("history"); 
 
             if (!topic) {
                 resultDiv.innerHTML = "<p style='color: red;'>⚠️ Please enter a topic!</p>";
@@ -34,59 +34,49 @@
             }
 
             resultDiv.innerHTML = "<p>⏳ Loading...</p>";
-            historyDiv.innerHTML = "Fetching history...";
+            historyDiv.innerHTML = "Fetching history..."; 
 
             const BASE_URL = window.location.hostname.includes("localhost") 
                 ? "http://127.0.0.1:8000" 
                 : "https://azukimedia.up.railway.app";
 
             try {
-                console.log(`🔗 Fetching: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
+                console.log(`🔗 Fetching from DB: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
 
-                const summaryResponse = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
+                const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
                     method: "GET",
                     headers: { "Accept": "application/json" }
                 });
 
-                if (!summaryResponse.ok) {
-                    throw new Error(`❌ Server error: ${summaryResponse.status} - ${summaryResponse.statusText}`);
+                if (!response.ok) {
+                    throw new Error(`❌ Server error: ${response.status} - ${response.statusText}`);
                 }
 
-                const summaryData = await summaryResponse.json();
-                console.log("✅ API Response:", summaryData);
+                const data = await response.json();
+                console.log("✅ API Response (from DB):", data);
 
-                // 🛠 **CLEAN UP THE SUMMARY TEXT**
-                let cleanedSummary = summaryData.summary
-                    .replace(/\n/g, "<br>")  // ✅ Convert newlines to <br>
-                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")  // ✅ Bold Markdown (**text**) -> <strong>text</strong>
-                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>'); // ✅ Links -> Clickable HTML
-
-                // ✅ CREATE A CLEAN TWEET POST
-                const tweetContainer = document.createElement("div");
-                tweetContainer.classList.add("tweet-container");
-
-                tweetContainer.innerHTML = `
-                    <div class="tweet-header">
-                        <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
-                        <div>
-                            <div class="tweet-username">AzukiMedia</div>
-                            <div class="tweet-meta">@azukimedia · Just Now</div>
+                resultDiv.innerHTML = `
+                    <div class="tweet-container">
+                        <div class="tweet-header">
+                            <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
+                            <div>
+                                <div class="tweet-username">AzukiMedia</div>
+                                <div class="tweet-meta">@azukimedia · Just Now</div>
+                            </div>
                         </div>
+                        <div class="tweet-body">${data.summary}</div>
                     </div>
-                    <div class="tweet-body">${cleanedSummary}</div>  <!-- ✅ Inject cleaned summary -->
                 `;
 
-                resultDiv.innerHTML = ""; // Clear previous results
-                resultDiv.appendChild(tweetContainer);
-
                 // ✅ Fetch History After New Summary is Generated
-                await fetchHistory(topic);
+                fetchHistory(topic);
 
             } catch (error) {
                 console.error("🚨 Fetch error:", error);
                 resultDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching summary: ${error.message}. Try again!</p>`;
             }
         }
+
 
         async function fetchHistory(topic) {
             console.log(`📜 Fetching history for: ${topic}`);
