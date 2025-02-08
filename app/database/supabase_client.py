@@ -22,5 +22,12 @@ def fetch_summary_from_db(topic: str):
     return response.data[0]["summary"] if response.data else None  
 
 def fetch_history_from_db(topic: str):
-    response = supabase.table("summaries").select("summary", "created_at").eq("topic", topic).order("created_at", desc=True).execute()
-    return response.data if response.data else []
+    """Retrieves all past summaries for a given topic."""
+    response = supabase.table("summaries").select("*").eq("topic", topic).order("created_at", desc=True).execute()
+    
+    print("🔍 RAW DB RESPONSE:", response)  # ✅ Log database output
+
+    if not response.data:
+        return []
+
+    return response.data  # ✅ Return full data instead of just summaries
