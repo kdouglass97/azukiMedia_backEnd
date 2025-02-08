@@ -1,90 +1,51 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 import os
 from datetime import datetime
 import re
+from app.database.supabase_client import insert_summary_to_db, fetch_history_from_db, fetch_summary_from_db
 from app.crewai.agents import get_summary_from_agents
-from app.database.supabase_client import insert_summary_to_db, fetch_history_from_db  # ✅ Import database functions
 
-# ✅ Initialize Router
 router = APIRouter()
 
-# ✅ Serve Homepage
 @router.get("/")
 async def serve_homepage():
     index_path = "app/static/index.html"
     
     if not os.path.exists(index_path):
-        print(f"❌ ERROR: index.html not found at {index_path}")
         return JSONResponse(content={"error": "index.html not found"}, status_code=404)
 
     return FileResponse(index_path)
 
-# ✅ Manually Handle OPTIONS for /summary/{topic}
-@router.options("/summary/{topic}")
-async def options_summary(topic: str):
-    return JSONResponse(
-        content={"message": "Preflight OK"},
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        },
-    )
-
-# ✅ News Summary API Endpoint (Calls CrewAI + Stores in Supabase)
-@router.get("/summary/{topic}")
 @router.get("/summary/{topic}")
 async def get_summary(topic: str):
-    # ✅ First, check if the summary already exists in the database
     existing_summary = fetch_summary_from_db(topic)
     if existing_summary:
         return {"topic": topic, "summary": existing_summary}
 
-    # 🚀 If not found, generate a new summary
-    summary = generate_summary(topic)
-    
-    # ✅ Store it in the database
+    summary = get_summary_from_agents(topic)  # 🚀 AI-generated summary
     success = insert_summary_to_db(topic, summary)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save summary.")
 
-    # ✅ Fetch again from DB (ensures formatting consistency)
     stored_summary = fetch_summary_from_db(topic)
-    
     return {"topic": topic, "summary": stored_summary}
 
-# ✅ Convert Markdown to HTML for frontend display
-def markdown_to_html(text: str) -> str:
-    text = text.replace("\n", "<br>")  # Convert newlines to `<br>`
-    text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", text)  # Convert bold text
-    text = re.sub(r"\[([^\]]+)\]\((https?:\/\/[^\)]+)\)", r'<a href="\2" target="_blank">\1</a>', text)  # Convert links
-    return text
-
-# ✅ History API Endpoint (Fetch Past Summaries)
 @router.get("/history/{topic}")
 async def get_history(topic: str):
-    print(f"📜 Fetching history for topic: {topic}")
-    
     try:
-        history_data = fetch_history_from_db(topic)  # ✅ Fetch summaries from DB
-        print(f"📡 Querying Supabase for topic history: {topic}")
-
-        # ✅ Format response
-        formatted_history = []
-        for entry in history_data:
-            formatted_entry = {
-                "id": entry["id"],  # ✅ Include UUID for tracking
+        history_data = fetch_history_from_db(topic)
+        formatted_history = [
+            {
+                "id": entry["id"],
                 "date": datetime.strptime(entry["created_at"], "%Y-%m-%dT%H:%M:%S.%f").strftime("%b %d, %Y, %I:%M %p"),
-                "summary": markdown_to_html(entry["summary"]),
+                "summary": entry["summary"].replace("\n", "<br>")  
             }
-            formatted_history.append(formatted_entry)
-
+            for entry in history_data
+        ]
         return JSONResponse(content={"topic": topic, "history": formatted_history})
 
     except Exception as e:
-        print(f"❌ ERROR fetching history: {e}")
         return JSONResponse(
             content={"error": "Server error", "details": str(e)},
             status_code=500

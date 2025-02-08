@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import os
 
@@ -13,22 +14,27 @@ app = FastAPI()
 # ✅ Mount Static Directory
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# ✅ CORS Middleware
-#    Allows both your production site and local dev origin.
+# ✅ CORS Middleware (Allows both local & production requests)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://azukimedia.up.railway.app",
-        "http://127.0.0.1:8000"
-    ],
+    allow_origins=["*"],  # 🔥 ALLOW ALL ORIGINS
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Import & Include Routes (points to routes.py)
+# ✅ Import & Include Routes
 from app.api.routes import router as api_router
 app.include_router(api_router)
+
+# ✅ Global Middleware to Add CORS Headers to Every Response
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # ✅ Local Run
 if __name__ == "__main__":
