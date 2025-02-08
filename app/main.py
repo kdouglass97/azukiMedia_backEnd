@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from dotenv import load_dotenv
 import os
 
@@ -22,6 +22,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ Serve index.html for `/`
+@app.get("/")
+async def serve_homepage():
+    index_path = "app/static/index.html"
+    if not os.path.exists(index_path):
+        return JSONResponse(content={"error": "index.html not found"}, status_code=404)
+    return FileResponse(index_path)
 
 # ✅ Import & Include Routes
 from app.api.routes import router as api_router
