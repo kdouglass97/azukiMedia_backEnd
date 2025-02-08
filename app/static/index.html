@@ -6,7 +6,6 @@
     <title>AI News Summary</title>
     <link rel="stylesheet" href="static/style.css">  <!-- ✅ Ensure correct CSS path -->
 </head>
-     
 <body>
     <h1>AI News Summary</h1>
     <p>Enter a topic to get the latest AI-generated news summary.</p>
@@ -55,21 +54,31 @@
                 const summaryData = await summaryResponse.json();
                 console.log("✅ API Response:", summaryData);
 
-                resultDiv.innerHTML = `
-                    <div class="tweet-container">
-                        <div class="tweet-header">
-                            <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
-                            <div>
-                                <div class="tweet-username">AzukiMedia</div>
-                                <div class="tweet-meta">@azukimedia · Just Now</div>
-                            </div>
+                const tweetContainer = document.createElement("div");
+                tweetContainer.classList.add("tweet-container");
+
+                tweetContainer.innerHTML = `
+                    <div class="tweet-header">
+                        <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
+                        <div>
+                            <div class="tweet-username">AzukiMedia</div>
+                            <div class="tweet-meta">@azukimedia · Just Now</div>
                         </div>
-                        <div class="tweet-body">${summaryData.summary}</div>
                     </div>
+                    <div class="tweet-body"></div>
                 `;
 
+                // ✅ Use innerText to prevent unwanted HTML rendering issues
+                tweetContainer.querySelector(".tweet-body").innerText = summaryData.summary;
+
+                resultDiv.innerHTML = ""; // Clear previous results
+                resultDiv.appendChild(tweetContainer);
+
+                // ✅ Force style refresh
+                tweetContainer.offsetHeight; // Trigger reflow
+
                 // ✅ Fetch History After New Summary is Generated
-                fetchHistory(topic);
+                await fetchHistory(topic);
 
             } catch (error) {
                 console.error("🚨 Fetch error:", error);
