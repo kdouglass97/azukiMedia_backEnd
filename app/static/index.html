@@ -20,6 +20,17 @@
     <div id="history">Loading history...</div>
 
     <script>
+        // Check if we're running on localhost or 127.0.0.1
+        const isLocalEnv = (
+            window.location.hostname.includes("localhost") ||
+            window.location.hostname.includes("127.0.0.1")
+        );
+
+        // Decide which BASE_URL to use
+        const BASE_URL = isLocalEnv 
+            ? "http://127.0.0.1:8000" 
+            : "https://azukimedia.up.railway.app";
+
         async function fetchSummary() {
             console.log("🔥 fetchSummary() function triggered!");
 
@@ -34,10 +45,6 @@
 
             resultDiv.innerHTML = "<p>⏳ Loading...</p>";
             historyDiv.innerHTML = "Fetching history...";
-
-            const BASE_URL = window.location.hostname.includes("localhost") 
-                ? "http://127.0.0.1:8000" 
-                : "https://azukimedia.up.railway.app";
 
             try {
                 console.log(`🔗 Fetching summary: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
@@ -67,6 +74,7 @@
                     </div>
                 `;
 
+                // Fetch past summaries
                 fetchHistory(topic);
 
             } catch (error) {
@@ -77,11 +85,7 @@
 
         async function fetchHistory(topic) {
             console.log(`📜 Fetching history for: ${topic}`);
-
             const historyDiv = document.getElementById("history");
-            const BASE_URL = window.location.hostname.includes("localhost") 
-                ? "http://127.0.0.1:8000" 
-                : "https://azukimedia.up.railway.app";
 
             try {
                 const historyResponse = await fetch(`${BASE_URL}/history/${encodeURIComponent(topic)}`, {
@@ -96,7 +100,7 @@
                 const historyData = await historyResponse.json();
                 console.log("📜 History Response:", historyData);
 
-                if (!historyData.history.length) {
+                if (!historyData.history?.length) {
                     historyDiv.innerHTML = "<p>📜 No past summaries found for this topic.</p>";
                     return;
                 }
@@ -119,6 +123,7 @@
                 historyDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching history: ${error.message}. Try again!</p>`;
             }
         }
-    </script>                       
+    </script>
+
 </body>
 </html>

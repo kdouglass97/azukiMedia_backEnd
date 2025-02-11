@@ -1,54 +1,62 @@
+# app/api/routes.py
+
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 import os
-from datetime import datetime
 import re
+from datetime import datetime
+
+# ✅ Import your DB + AI helpers
 from app.database.supabase_client import insert_summary_to_db, fetch_history_from_db, fetch_summary_from_db
 from app.crewai.agents import get_summary_from_agents
 
 router = APIRouter()
 
-@router.get("/")
-async def serve_homepage():
-    index_path = "app/static/index.html"
-    
-    if not os.path.exists(index_path):
-        return JSONResponse(content={"error": "index.html not found"}, status_code=404)
-
-    return FileResponse(index_path)
-
-import re
-
-# ✅ Function to Convert Markdown to HTML for Proper Styling
+# ✅ Helper to convert Markdown to HTML
 def markdown_to_html(text: str) -> str:
     """Converts markdown-style text to HTML"""
-    text = text.replace("\n", "<br>")  # Convert newlines to `<br>`
-    text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", text)  # Convert bold text
-    text = re.sub(r"\[([^\]]+)\]\((https?:\/\/[^\)]+)\)", r'<a href="\2" target="_blank">\1</a>', text)  # Convert links
+    text = text.replace("\n", "<br>")  # Convert newlines to <br>
+    text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", text)  # Bold text
+    text = re.sub(r"\[([^\]]+)\]\((https?:\/\/[^\)]+)\)", r'<a href="\2" target="_blank">\1</a>', text)  # Links
     return text
 
+# ✅ GET /summary/{topic}
+@router.get("/summary/{topic}")
+async def get_summary(topic: str):
+    """Fetch summary from DB or generate a new one if missing."""
+    existing_summary = fetch_summary_from_db(topic)
+    if existing_summary:
+        return {"topic": topic, "summary": markdown_to_html(existing_summary)}
+
+    # Generate a new summary
+    summary = get_summary_from_agents(topic)
+    success = insert_summary_to_db(topic, summary)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save summary.")
+
+    return {"topic": topic, "summary": markdown_to_html(summary)}
+
+# ✅ GET /history/{topic}
 @router.get("/history/{topic}")
 async def get_history(topic: str):
+    """Fetch past summaries from the database."""
     print(f"📜 Fetching history for topic: {topic}")
-
     try:
         history_data = fetch_history_from_db(topic)
-        print(f"📡 Supabase Raw Data: {history_data}")  # Debug log
-
         if not history_data:
-            return JSONResponse(content={"topic": topic, "history": []})
+            return {"topic": topic, "history": []}
 
+        # Format each entry for the frontend
         formatted_history = []
         for entry in history_data:
-            formatted_entry = {
-                "id": entry.get("id", "unknown-id"),  # ✅ Avoid crashes on missing ID
+            formatted_history.append({
+                "id": entry.get("id", "unknown-id"),
                 "date": entry.get("created_at", "unknown-date"),
-                "summary": markdown_to_html(entry.get("summary", "")),  # ✅ Avoid crashes on missing summary
-            }
-            formatted_history.append(formatted_entry)
+                "summary": markdown_to_html(entry.get("summary", "")),
+            })
 
-        return JSONResponse(content={"topic": topic, "history": formatted_history})
+        return {"topic": topic, "history": formatted_history}
 
     except Exception as e:
-        print(f"❌ ERROR fetching history: {e}")  # Debug log
-        return JSONResponse(content={"error": "Server error", "details": str(e)}, status_code=500)
+        print(f"❌ ERROR fetching history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
