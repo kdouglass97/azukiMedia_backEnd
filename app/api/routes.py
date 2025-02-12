@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ✅ Import your DB + AI helpers
 from app.database.supabase_client import insert_summary_to_db, fetch_history_from_db, fetch_summary_from_db
@@ -41,37 +41,58 @@ def check_summary(topic: str = Query(...)):
             "summary": None,
             "created_at": None,
         }
+@router.post("/cron_update")
+def cron_auto_update():
+    # List of topics to auto-update for MVP.
+    TRACKED_TOPICS = ["almaty", "tblisi", "deFi"]
+    results = []
 
-@router.get("/search")
+    for topic in TRACKED_TOPICS:
+        summary_text = get_summary_from_agents(topic)
+        success = insert_summary_to_db(topic, summary_text)
+        results.append({"topic": topic, "updated": success})
+    
+    return {"updated_topics": results}
+
 @router.get("/search")
 def search_summary(topic: str = Query(...)):
     """
-    If a summary exists in DB, return it; 
-    otherwise generate a new summary and store it.
+    Checks if a summary for the topic exists and is less than 6 hours old.
+    If so, returns that summary. Otherwise, generates a new summary, stores it,
+    and returns it.
     """
     existing = fetch_summary_from_db(topic)
     if existing:
-        # Convert from Markdown -> HTML before returning
-        html_summary = markdown_to_html(existing["summary"])
-        return {
-            "topic": topic,
-            "summary": html_summary,
-            "created_at": existing["created_at"]
-        }
+        # Parse the created_at timestamp from the DB (assumed to be in ISO format)
+        created_at_str = existing["created_at"]
+        created_at = datetime.fromisoformat(created_at_str)
+        now = datetime.utcnow()
 
-    # Generate a new summary if not in DB
+        # Calculate the time difference in hours
+        hours_diff = (now - created_at).total_seconds() / 3600.0
+
+        if hours_diff < 6:
+            # If the existing summary is less than 6 hours old, return it
+            html_summary = markdown_to_html(existing["summary"])
+            return {
+                "topic": topic,
+                "summary": html_summary,
+                "created_at": existing["created_at"]
+            }
+        # Otherwise, fall through to generate a new summary
+
+    # Either no summary exists or it is older than 6 hours, so generate a new one
     summary_text = get_summary_from_agents(topic)
     success = insert_summary_to_db(topic, summary_text)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save summary.")
 
-    # Convert AI text to HTML
+    # Convert new summary from Markdown to HTML
     html_summary = markdown_to_html(summary_text)
-
     return {
         "topic": topic,
         "summary": html_summary,
-        "created_at": None
+        "created_at": None  # Optionally, you could fetch the new created_at from DB
     }
 
 # ✅ GET /summary/{topic}
@@ -112,3 +133,4 @@ async def get_history(topic: str):
     except Exception as e:
         print(f"❌ ERROR fetching history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+

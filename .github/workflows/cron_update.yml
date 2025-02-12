@@ -1,0 +1,14 @@
+name: Auto Update Summaries
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # every 6 hours
+  workflow_dispatch:  # allows manual triggering
+
+jobs:
+  update_summaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger cron update endpoint
+        run: |
+          curl -X POST "https://azukimedia.up.railway.app/cron_update"
