@@ -15,19 +15,42 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def insert_summary_to_db(topic: str, summary: str) -> bool:
     data = {"topic": topic, "summary": summary}
     response = supabase.table("summaries").insert(data).execute()
-    return response.status_code == 201  
+    return response.status_code == 201
 
 def fetch_summary_from_db(topic: str):
-    response = supabase.table("summaries").select("summary").eq("topic", topic).order("created_at", desc=True).limit(1).execute()
-    return response.data[0]["summary"] if response.data else None  
+    """
+    Fetch the most recent summary + created_at from the DB for a given topic.
+    """
+    response = (
+        supabase
+        .table("summaries")
+        .select("summary, created_at")
+        .eq("topic", topic)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    
+    if response.data:
+        # Return a dict with both summary + created_at
+        return {
+            "summary": response.data[0]["summary"],
+            "created_at": response.data[0]["created_at"]
+        }
+    return None
 
 def fetch_history_from_db(topic: str):
-    """Retrieves all past summaries for a given topic."""
-    response = supabase.table("summaries").select("*").eq("topic", topic).order("created_at", desc=True).execute()
+    """
+    Fetch all summaries (except the newest one) for a given topic, newest-first.
+    """
+    response = (
+        supabase
+        .table("summaries")
+        .select("*")
+        .eq("topic", topic)
+        .order("created_at", desc=True)
+        .range(1, 999)  # <-- SKIP the first row (index 0 is the newest)
+        .execute()
+    )
     
-    print("🔍 RAW DB RESPONSE:", response)  # ✅ Log database output
-
-    if not response.data:
-        return []
-
-    return response.data  # ✅ Return full data instead of just summaries
+    return response.data if response.data else []

@@ -24,17 +24,27 @@ def markdown_to_html(text: str) -> str:
 @router.get("/summary/{topic}")
 async def get_summary(topic: str):
     """Fetch summary from DB or generate a new one if missing."""
-    existing_summary = fetch_summary_from_db(topic)
-    if existing_summary:
-        return {"topic": topic, "summary": markdown_to_html(existing_summary)}
+    existing = fetch_summary_from_db(topic)
+    if existing:
+        # existing is {"summary": "...", "created_at": "..."}
+        return {
+            "topic": topic,
+            "summary": markdown_to_html(existing["summary"]),
+            "created_at": existing["created_at"]
+        }
 
-    # Generate a new summary
-    summary = get_summary_from_agents(topic)
-    success = insert_summary_to_db(topic, summary)
+    # If not found, generate a new summary
+    summary_text = get_summary_from_agents(topic)
+    success = insert_summary_to_db(topic, summary_text)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save summary.")
 
-    return {"topic": topic, "summary": markdown_to_html(summary)}
+    # We just inserted a new summary; let's return that with no date (or fetch again)
+    return {
+        "topic": topic,
+        "summary": markdown_to_html(summary_text),
+        "created_at": None
+    }
 
 # ✅ GET /history/{topic}
 @router.get("/history/{topic}")

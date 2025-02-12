@@ -1,129 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI News Summary</title>
-    <link rel="stylesheet" href="static/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI News Summary</title>
+  <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 
-    <h1>AI News Summary</h1>
-    <p>Enter a topic to get the latest AI-generated news summary.</p>
-    
-    <input type="text" id="topicInput" placeholder="Enter a topic...">
-    <button onclick="fetchSummary()">Get Summary</button>
+  <h1>AI News Summary</h1>
+  
+  <!-- Input + "Get Summary" button (manual entry) -->
+  <p>Enter a topic to get the latest AI-generated news summary.</p>
+  <input type="text" id="topicInput" placeholder="Enter a topic...">
+  <button onclick="fetchSummary()">Get Summary</button>
+  
+  <!-- Or pick one of these topic buttons -->
+  <p>Or pick one:</p>
+  <button onclick="handleTopic('tblisi')">Tblisi</button>
+  <button onclick="handleTopic('almaty')">Almaty</button>
+  <button onclick="handleTopic('deFi')">deFi</button>
 
-    <div id="result"></div>
-    
-    <h2>Topic History</h2>
-    <div id="history">Loading history...</div>
+  <!-- Results -->
+  <div id="result"></div>
+  
+  <!-- History -->
+  <div id="history">Loading history...</div>
 
-    <script>
-        // Check if we're running on localhost or 127.0.0.1
-        const isLocalEnv = (
-            window.location.hostname.includes("localhost") ||
-            window.location.hostname.includes("127.0.0.1")
-        );
+  <script>
+    // On page load, auto‐fetch a default topic so the user sees something right away.
+    window.addEventListener("DOMContentLoaded", () => {
+      handleTopic("almaty");
+    });
 
-        // Decide which BASE_URL to use
-        const BASE_URL = isLocalEnv 
-            ? "http://127.0.0.1:8000" 
-            : "https://azukimedia.up.railway.app";
+    // Decide if we're local or production
+    const isLocalEnv = (
+      window.location.hostname.includes("localhost") ||
+      window.location.hostname.includes("127.0.0.1")
+    );
 
-        async function fetchSummary() {
-            console.log("🔥 fetchSummary() function triggered!");
+    const BASE_URL = isLocalEnv 
+      ? "http://127.0.0.1:8000" 
+      : "https://azukimedia.up.railway.app";
 
-            const topic = document.getElementById("topicInput").value.trim();
-            const resultDiv = document.getElementById("result");
-            const historyDiv = document.getElementById("history");
+    // This function is called when a user clicks one of the 3 topic buttons
+    function handleTopic(topic) {
+      // Put the chosen topic in the input
+      document.getElementById("topicInput").value = topic;
 
-            if (!topic) {
-                resultDiv.innerHTML = "<p style='color: red;'>⚠️ Please enter a topic!</p>";
-                return;
-            }
+      // Then fetch summary + history for that topic
+      fetchSummary();
+    }
 
-            resultDiv.innerHTML = "<p>⏳ Loading...</p>";
-            historyDiv.innerHTML = "Fetching history...";
+    // Fetch summary from the server
+    // Helper: parse created_at into something like "02/08/2025 (2h ago)"
+    function formatTimestamp(isoString) {
+        if (!isoString) return "(unknown)";
+        const now = new Date();
+        const created = new Date(isoString);
 
-            try {
-                console.log(`🔗 Fetching summary: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
+        // Format as MM/DD/YYYY
+        const month = String(created.getMonth() + 1).padStart(2, "0");
+        const day = String(created.getDate()).padStart(2, "0");
+        const year = created.getFullYear();
 
-                const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
-                    method: "GET",
-                    headers: { "Accept": "application/json" }
-                });
+        // Hours difference
+        const diffMs = now - created;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-                if (!response.ok) {
-                    throw new Error(`❌ Server error: ${response.status} - ${response.statusText}`);
-                }
+        return `${month}/${day}/${year} (${diffHours}h ago)`;
+    }
 
-                const data = await response.json();
-                console.log("✅ API Response (from DB):", data);
+async function fetchSummary() {
+  console.log("🔥 fetchSummary() function triggered!");
 
-                resultDiv.innerHTML = `
-                    <div class="tweet-container">
-                        <div class="tweet-header">
-                            <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
-                            <div>
-                                <div class="tweet-username">AzukiMedia</div>
-                                <div class="tweet-meta">@azukimedia · Just Now</div>
-                            </div>
-                        </div>
-                        <div class="tweet-body">${data.summary}</div>
-                    </div>
-                `;
+  const topic = document.getElementById("topicInput").value.trim();
+  const resultDiv = document.getElementById("result");
+  const historyDiv = document.getElementById("history");
 
-                // Fetch past summaries
-                fetchHistory(topic);
+  if (!topic) {
+    resultDiv.innerHTML = "<p style='color: red;'>⚠️ Please enter a topic!</p>";
+    return;
+  }
 
-            } catch (error) {
-                console.error("🚨 Fetch error:", error);
-                resultDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching summary: ${error.message}. Try again!</p>`;
-            }
+  resultDiv.innerHTML = "<p>⏳ Loading summary...</p>";
+  historyDiv.innerHTML = "Fetching history...";
+
+  try {
+    console.log(`🔗 Fetching summary: ${BASE_URL}/summary/${encodeURIComponent(topic)}`);
+
+    const response = await fetch(`${BASE_URL}/summary/${encodeURIComponent(topic)}`, {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+
+    if (!response.ok) {
+      throw new Error(`❌ Server error: ${response.status} - ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("✅ API Response (from DB):", data);
+
+    // If there's a 'created_at', we convert it to something readable
+    const timestamp = data.created_at 
+      ? formatTimestamp(data.created_at) 
+      : "(just now)";
+
+    // Instead of "Just Now", we insert the real date
+    resultDiv.innerHTML = `
+      <div class="tweet-container">
+          <div class="tweet-header">
+              <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
+              <div>
+                  <div class="tweet-username">AzukiMedia</div>
+                  <div class="tweet-meta">@azukimedia · ${timestamp}</div>
+              </div>
+          </div>
+          <div class="tweet-body">${data.summary}</div>
+      </div>
+    `;
+
+    // Then fetch older history
+    fetchHistory(topic);
+
+  } catch (error) {
+    console.error("🚨 Fetch error:", error);
+    resultDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching summary: ${error.message}. Try again!</p>`;
+  }
+}
+
+    // Fetch history from the server
+async function fetchHistory(topic) {
+    console.log(`📜 Fetching history for: ${topic}`);
+    const historyDiv = document.getElementById("history");
+
+    try {
+        const historyResponse = await fetch(`${BASE_URL}/history/${encodeURIComponent(topic)}`, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+        });
+
+        if (!historyResponse.ok) {
+        throw new Error(`❌ Server error: ${historyResponse.status} - ${historyResponse.statusText}`);
         }
 
-        async function fetchHistory(topic) {
-            console.log(`📜 Fetching history for: ${topic}`);
-            const historyDiv = document.getElementById("history");
+        const historyData = await historyResponse.json();
+        console.log("📜 History Response:", historyData);
 
-            try {
-                const historyResponse = await fetch(`${BASE_URL}/history/${encodeURIComponent(topic)}`, {
-                    method: "GET",
-                    headers: { "Accept": "application/json" }
-                });
-
-                if (!historyResponse.ok) {
-                    throw new Error(`❌ Server error: ${historyResponse.status} - ${historyResponse.statusText}`);
-                }
-
-                const historyData = await historyResponse.json();
-                console.log("📜 History Response:", historyData);
-
-                if (!historyData.history?.length) {
-                    historyDiv.innerHTML = "<p>📜 No past summaries found for this topic.</p>";
-                    return;
-                }
-
-                historyDiv.innerHTML = historyData.history.map(entry => `
-                    <div class="tweet-container">
-                        <div class="tweet-header">
-                            <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
-                            <div>
-                                <div class="tweet-username">AzukiMedia</div>
-                                <div class="tweet-meta">@azukimedia · ${entry.date}</div>
-                            </div>
-                        </div>
-                        <div class="tweet-body">${entry.summary.replace(/\n/g, "<br>")}</div>
-                    </div>
-                `).join("");
-
-            } catch (error) {
-                console.error("🚨 History fetch error:", error);
-                historyDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching history: ${error.message}. Try again!</p>`;
-            }
+        if (!historyData.history?.length) {
+        historyDiv.innerHTML = "<p>No older summaries found.</p>";
+        return;
         }
-    </script>
+
+        // Build the HTML
+        historyDiv.innerHTML = historyData.history.map(entry => {
+        const niceDate = formatTimestamp(entry.date);
+        return `
+            <div class="tweet-container">
+            <div class="tweet-header">
+                <img class="profile-pic" src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Profile">
+                <div>
+                <div class="tweet-username">AzukiMedia</div>
+                <div class="tweet-meta">@azukimedia · ${niceDate}</div>
+                </div>
+            </div>
+            <div class="tweet-body">${entry.summary.replace(/\n/g, "<br>")}</div>
+            </div>
+        `;
+        }).join("");
+
+    } catch (error) {
+        console.error("🚨 History fetch error:", error);
+        historyDiv.innerHTML = `<p style='color: red;'>⚠️ Error fetching history: ${error.message}. Try again!</p>`;
+    }
+}
+  </script>
 
 </body>
 </html>
