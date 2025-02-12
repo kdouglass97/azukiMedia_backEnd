@@ -15,7 +15,11 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def insert_summary_to_db(topic: str, summary: str) -> bool:
     data = {"topic": topic, "summary": summary}
     response = supabase.table("summaries").insert(data).execute()
-    return response.status_code == 201
+    
+    # If the insert was successful, response.data should contain a list of inserted rows.
+    if response.data:
+        return True
+    return False
 
 def fetch_summary_from_db(topic: str):
     """
@@ -49,7 +53,7 @@ def fetch_history_from_db(topic: str):
         .select("*")
         .eq("topic", topic)
         .order("created_at", desc=True)
-        .range(1, 999)  # <-- SKIP the first row (index 0 is the newest)
+        .range(1, 999)  # Skip index 0 (the newest entry)
         .execute()
     )
     
