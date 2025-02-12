@@ -43,6 +43,7 @@ def check_summary(topic: str = Query(...)):
         }
 
 @router.get("/search")
+@router.get("/search")
 def search_summary(topic: str = Query(...)):
     """
     If a summary exists in DB, return it; 
@@ -50,9 +51,11 @@ def search_summary(topic: str = Query(...)):
     """
     existing = fetch_summary_from_db(topic)
     if existing:
+        # Convert from Markdown -> HTML before returning
+        html_summary = markdown_to_html(existing["summary"])
         return {
             "topic": topic,
-            "summary": existing["summary"],
+            "summary": html_summary,
             "created_at": existing["created_at"]
         }
 
@@ -62,26 +65,28 @@ def search_summary(topic: str = Query(...)):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save summary.")
 
+    # Convert AI text to HTML
+    html_summary = markdown_to_html(summary_text)
+
     return {
         "topic": topic,
-        "summary": summary_text,
+        "summary": html_summary,
         "created_at": None
     }
-    
+
 # ✅ GET /summary/{topic}
 @router.get("/summary/{topic}")
 def get_summary_only(topic: str):
-    """Return the existing summary if found, or 404 if not found."""
     existing = fetch_summary_from_db(topic)
     if not existing:
         raise HTTPException(status_code=404, detail="No summary found for this topic.")
     
+    html_summary = markdown_to_html(existing["summary"])
     return {
         "topic": topic,
-        "summary": existing["summary"],
+        "summary": html_summary,
         "created_at": existing["created_at"]
     }
-
 
 # ✅ GET /history/{topic}
 @router.get("/history/{topic}")
