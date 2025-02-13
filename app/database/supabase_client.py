@@ -58,3 +58,10 @@ def fetch_history_from_db(topic: str):
     )
     
     return response.data if response.data else []
+
+def insert_search_log(query: str) -> bool:
+    data = {"query": query}
+    response = supabase.table("search_logs").insert(data).execute()
+    if response.data:
+        return True
+    return False

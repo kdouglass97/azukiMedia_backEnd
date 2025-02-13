@@ -11,4 +11,5 @@ jobs:
     steps:
       - name: Trigger cron update endpoint
         run: |
-          curl -X POST "https://azukimedia.up.railway.app/cron_update"
+          curl -X POST "https://azukimedia.up.railway.app/cron_update" \
+            -H "X-CRON-TOKEN: 556e26b0fafd4355793e055e6aeba77f"
