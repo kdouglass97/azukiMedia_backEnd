@@ -5,13 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from dotenv import load_dotenv
-from app.api.routes import router as api_router
 
 # ✅ Load Environment Variables
 load_dotenv()
 
 # --- Sentry & Logging Setup ---
-# Install sentry-sdk with: pip install sentry-sdk
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
@@ -35,35 +33,38 @@ if SENTRY_DSN:
     )
 
 # ✅ Initialize FastAPI App
-app = FastAPI()
+def create_app():
+    app = FastAPI()
 
-# Add Sentry ASGI Middleware if SENTRY_DSN is set
-if SENTRY_DSN:
-    app.add_middleware(SentryAsgiMiddleware)
+    # ✅ CORS Middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # 🔥 ALLOW ALL ORIGINS
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-# ✅ Mount Static Directory
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    # ✅ Mount Static Directory
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# ✅ CORS Middleware (Allows both local & production requests)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 🔥 ALLOW ALL ORIGINS
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # ✅ Serve index.html for `/`
+    @app.get("/")
+    async def serve_homepage():
+        index_path = "app/static/index.html"
+        if not os.path.exists(index_path):
+            logger.error("index.html not found")
+            return JSONResponse(content={"error": "index.html not found"}, status_code=404)
+        return FileResponse(index_path)
 
-# ✅ Serve index.html for `/`
-@app.get("/")
-async def serve_homepage():
-    index_path = "app/static/index.html"
-    if not os.path.exists(index_path):
-        logger.error("index.html not found")
-        return JSONResponse(content={"error": "index.html not found"}, status_code=404)
-    return FileResponse(index_path)
+    # ✅ Import & Include Routes *AFTER* initializing app
+    from app.api.routes import router as api_router
+    app.include_router(api_router)
 
-# ✅ Import & Include Routes
-app.include_router(api_router)
+    return app
+
+# ✅ Create FastAPI App
+app = create_app()
 
 # ✅ Global Middleware to Add CORS Headers to Every Response
 @app.middleware("http")

@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query, Header
 from fastapi.responses import JSONResponse
@@ -10,12 +11,11 @@ from app.database.supabase_client import (
     insert_search_log
 )
 from app.crewai.agents import get_summary_from_agents
-import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Helper to convert Markdown to HTML
+# ✅ Helper to convert Markdown to HTML
 def markdown_to_html(text: str) -> str:
     """Converts markdown-style text to HTML."""
     text = text.replace("\n", "<br>")
@@ -85,46 +85,27 @@ def search_summary(topic: str = Query(...)):
     """
     try:
         logger.info("Received /search request for topic: %s", topic)
-        # Log the search query for analytics
-        try:
-            insert_search_log(topic)
-            logger.info("Search query logged: %s", topic)
-        except Exception as log_error:
-            logger.exception("Failed to log search query: %s", topic)
-        
+        insert_search_log(topic)
+
         existing = fetch_summary_from_db(topic)
         if existing:
-            created_at_str = existing["created_at"]
-            created_at = datetime.fromisoformat(created_at_str)
-            now = datetime.utcnow()
-            hours_diff = (now - created_at).total_seconds() / 3600.0
-
-            if hours_diff < 6:
-                logger.info("Returning cached summary for topic: %s", topic)
-                html_summary = markdown_to_html(existing["summary"])
+            created_at = datetime.fromisoformat(existing["created_at"])
+            if (datetime.utcnow() - created_at).total_seconds() / 3600.0 < 6:
                 return {
                     "topic": topic,
-                    "summary": html_summary,
+                    "summary": markdown_to_html(existing["summary"]),
                     "created_at": existing["created_at"]
                 }
-            else:
-                logger.info("Cached summary for topic '%s' is older than 6 hours; generating new one", topic)
-        else:
-            logger.info("No existing summary for topic: %s; generating new one", topic)
 
-        # Generate a new summary since none exists or it's expired
         summary_text = get_summary_from_agents(topic)
         success = insert_summary_to_db(topic, summary_text)
         if not success:
-            logger.error("Failed to save new summary for topic: %s", topic)
             raise HTTPException(status_code=500, detail="Failed to save summary.")
 
-        html_summary = markdown_to_html(summary_text)
-        logger.info("New summary generated for topic: %s", topic)
         return {
             "topic": topic,
-            "summary": html_summary,
-            "created_at": None  # Optionally, fetch the new created_at from DB
+            "summary": markdown_to_html(summary_text),
+            "created_at": None
         }
     except Exception as e:
         logger.exception("Error in /search endpoint for topic: %s", topic)
@@ -133,41 +114,26 @@ def search_summary(topic: str = Query(...)):
 @router.get("/summary/{topic}")
 def get_summary_only(topic: str):
     try:
-        logger.info("Received /summary request for topic: %s", topic)
         existing = fetch_summary_from_db(topic)
         if not existing:
-            logger.warning("No summary found for topic: %s", topic)
             raise HTTPException(status_code=404, detail="No summary found for this topic.")
-        html_summary = markdown_to_html(existing["summary"])
-        logger.info("Returning summary for topic: %s", topic)
         return {
             "topic": topic,
-            "summary": html_summary,
+            "summary": markdown_to_html(existing["summary"]),
             "created_at": existing["created_at"]
         }
     except Exception as e:
-        logger.exception("Error in /summary endpoint for topic: %s", topic)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/history/{topic}")
 async def get_history(topic: str):
-    """Fetch past summaries from the database."""
     try:
-        logger.info("Fetching history for topic: %s", topic)
         history_data = fetch_history_from_db(topic)
         if not history_data:
-            logger.info("No history data found for topic: %s", topic)
             return {"topic": topic, "history": []}
-
-        formatted_history = []
-        for entry in history_data:
-            formatted_history.append({
-                "id": entry.get("id", "unknown-id"),
-                "date": entry.get("created_at", "unknown-date"),
-                "summary": markdown_to_html(entry.get("summary", "")),
-            })
-        logger.info("Returning history for topic: %s", topic)
-        return {"topic": topic, "history": formatted_history}
+        return {"topic": topic, "history": [
+            {"id": entry.get("id", "unknown-id"), "date": entry.get("created_at", "unknown-date"),
+             "summary": markdown_to_html(entry.get("summary", ""))}
+            for entry in history_data]}
     except Exception as e:
-        logger.exception("Error fetching history for topic: %s", topic)
         raise HTTPException(status_code=500, detail=str(e))
