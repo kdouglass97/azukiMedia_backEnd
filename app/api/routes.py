@@ -67,26 +67,40 @@ def cron_auto_update(x_cron_token: str = Header(...)):
     # Ensure token comparison is correct
     if not expected_token:
         logger.error("❌ CRON_SECRET_TOKEN is missing from environment variables!")
-        raise HTTPException(status_code=500, detail="Server error: Missing secret token")
+        return JSONResponse(status_code=500, content={"error": "Server error: Missing secret token"})
 
     if x_cron_token.strip() != expected_token.strip():  # Strip spaces to avoid mismatch
         logger.warning("⚠️ Unauthorized access attempt to /cron_update")
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     try:
         logger.info("✅ Authorized cron request - Starting update")
         TRACKED_TOPICS = ["almaty", "tblisi", "deFi"]
         results = []
+        
         for topic in TRACKED_TOPICS:
             logger.info(f"📌 Generating new summary for topic: {topic}")
             summary_text = get_summary_from_agents(topic)
+
+            if not summary_text:
+                logger.error(f"❌ Failed to generate summary for topic: {topic}")
+                results.append({"topic": topic, "updated": False, "error": "Failed to generate summary"})
+                continue
+
             success = insert_summary_to_db(topic, summary_text)
             results.append({"topic": topic, "updated": success})
+
+            if success:
+                logger.info(f"✅ Successfully updated summary for: {topic}")
+            else:
+                logger.error(f"❌ Failed to insert summary into DB for: {topic}")
+
         logger.info(f"✅ Cron update completed for topics: {TRACKED_TOPICS}")
         return {"updated_topics": results}
+
     except Exception as e:
         logger.exception("❌ Error in /cron_update endpoint")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @router.get("/search")
 def search_summary(topic: str = Query(...)):
