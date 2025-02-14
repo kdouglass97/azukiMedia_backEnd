@@ -9,6 +9,14 @@ from dotenv import load_dotenv
 # ✅ Load Environment Variables
 load_dotenv()
 
+# ✅ Debug CRON_SECRET_TOKEN inside Railway logs
+cron_secret = os.getenv("CRON_SECRET_TOKEN")
+print(f"🚀 CRON_SECRET_TOKEN from ENV: {cron_secret}")
+
+# ✅ Log it in Railway logs
+logger = logging.getLogger(__name__)
+logger.info(f"🚀 CRON_SECRET_TOKEN from ENV: {cron_secret}")
+
 # --- Sentry & Logging Setup ---
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
