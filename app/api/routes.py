@@ -58,23 +58,34 @@ def cron_auto_update(x_cron_token: str = Header(...)):
     Auto-update endpoint for tracked topics.
     Requires a valid secret token in the header 'X-CRON-TOKEN' for authorization.
     """
-    if x_cron_token != os.getenv("CRON_SECRET_TOKEN"):
-        logger.warning("Unauthorized access attempt to /cron_update")
+    expected_token = os.getenv("CRON_SECRET_TOKEN")
+
+    # 🔍 Debugging: Log received vs expected tokens
+    logger.info(f"🔍 Received X-CRON-TOKEN: {x_cron_token}")
+    logger.info(f"🔍 Expected CRON_SECRET_TOKEN: {expected_token}")
+
+    # Ensure token comparison is correct
+    if not expected_token:
+        logger.error("❌ CRON_SECRET_TOKEN is missing from environment variables!")
+        raise HTTPException(status_code=500, detail="Server error: Missing secret token")
+
+    if x_cron_token.strip() != expected_token.strip():  # Strip spaces to avoid mismatch
+        logger.warning("⚠️ Unauthorized access attempt to /cron_update")
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        logger.info("Starting cron update for tracked topics")
+        logger.info("✅ Authorized cron request - Starting update")
         TRACKED_TOPICS = ["almaty", "tblisi", "deFi"]
         results = []
         for topic in TRACKED_TOPICS:
-            logger.info("Generating new summary for topic: %s", topic)
+            logger.info(f"📌 Generating new summary for topic: {topic}")
             summary_text = get_summary_from_agents(topic)
             success = insert_summary_to_db(topic, summary_text)
             results.append({"topic": topic, "updated": success})
-        logger.info("Cron update completed for topics: %s", TRACKED_TOPICS)
+        logger.info(f"✅ Cron update completed for topics: {TRACKED_TOPICS}")
         return {"updated_topics": results}
     except Exception as e:
-        logger.exception("Error in /cron_update endpoint")
+        logger.exception("❌ Error in /cron_update endpoint")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/search")
@@ -137,17 +148,3 @@ async def get_history(topic: str):
             for entry in history_data]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/cron_update")
-def cron_auto_update(x_cron_token: str = Header(...)):
-    expected_token = os.getenv("CRON_SECRET_TOKEN")
-    
-    logger.info(f"🔍 Received X-CRON-TOKEN: {x_cron_token}")
-    logger.info(f"🔍 Expected CRON_SECRET_TOKEN: {expected_token}")
-
-    if x_cron_token.strip() != expected_token.strip():  # Ensure no trailing spaces
-        logger.warning("⚠️ Unauthorized access attempt to /cron_update")
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    logger.info("✅ Authorized cron request")
-    # Continue with updating summaries...
