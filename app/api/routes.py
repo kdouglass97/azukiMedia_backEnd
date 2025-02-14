@@ -137,3 +137,17 @@ async def get_history(topic: str):
             for entry in history_data]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cron_update")
+def cron_auto_update(x_cron_token: str = Header(...)):
+    expected_token = os.getenv("CRON_SECRET_TOKEN")
+    
+    logger.info(f"🔍 Received X-CRON-TOKEN: {x_cron_token}")
+    logger.info(f"🔍 Expected CRON_SECRET_TOKEN: {expected_token}")
+
+    if x_cron_token.strip() != expected_token.strip():  # Ensure no trailing spaces
+        logger.warning("⚠️ Unauthorized access attempt to /cron_update")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    logger.info("✅ Authorized cron request")
+    # Continue with updating summaries...
