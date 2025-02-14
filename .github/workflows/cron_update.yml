@@ -2,14 +2,16 @@ name: Auto Update Summaries
 
 on:
   schedule:
-    - cron: "0 */6 * * *"  # every 6 hours
-  workflow_dispatch:  # allows manual triggering
+    - cron: "0 */6 * * *"  # Runs every 6 hours
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   update_summaries:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger cron update endpoint
+        env:
+          CRON_SECRET_TOKEN: ${{ secrets.CRON_SECRET_TOKEN }}  # Pass secret to env
         run: |
           curl -X POST "https://azukimedia.up.railway.app/cron_update" \
-            -H "X-CRON-TOKEN: ${{ secrets.CRON_SECRET_TOKEN }}"
+               -H "X-CRON-TOKEN: $CRON_SECRET_TOKEN"
