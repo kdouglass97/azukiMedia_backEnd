@@ -9,9 +9,22 @@ jobs:
   update_summaries:
     runs-on: ubuntu-latest
     steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+
+      - name: Debug CRON_SECRET_TOKEN Length
+        run: |
+          if [[ -z "${{ secrets.CRON_SECRET_TOKEN }}" ]]; then
+            echo "❌ CRON_SECRET_TOKEN is missing!"
+            exit 1
+          else
+            echo "✅ CRON_SECRET_TOKEN is set."
+          fi
+
       - name: Trigger cron update endpoint
         env:
           CRON_SECRET_TOKEN: ${{ secrets.CRON_SECRET_TOKEN }}  # Pass secret to env
         run: |
+          echo "🔍 Sending X-CRON-TOKEN: (masked)"
           curl -X POST "https://azukimedia.up.railway.app/cron_update" \
                -H "X-CRON-TOKEN: $CRON_SECRET_TOKEN"
