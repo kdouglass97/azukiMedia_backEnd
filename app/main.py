@@ -17,6 +17,8 @@ print(f"🚀 CRON_SECRET_TOKEN from ENV: {cron_secret}")
 logger = logging.getLogger(__name__)
 logger.info(f"🚀 CRON_SECRET_TOKEN from ENV: {cron_secret}")
 
+print(f"🚀 CRON_SECRET_TOKEN from ENV: {os.getenv('CRON_SECRET_TOKEN')}")
+
 # --- Sentry & Logging Setup ---
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
